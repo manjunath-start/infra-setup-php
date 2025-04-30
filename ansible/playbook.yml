@@ -1,0 +1,16 @@
+---
+- name: Configure Docker and Swarm on EC2
+  hosts: webservers
+  become: true
+  vars:
+    docker_compose_version: "1.29.2"
+    swarm_port: 2377
+    app_image: "manjunathdc/yii2-app:latest"
+    app_name: "yii2-app"
+    app_port: 80
+    nginx_conf_path: "/etc/nginx/sites-available/yii2.conf"
+    nginx_conf_link: "/etc/nginx/sites-enabled/yii2.conf"
+
+  roles:
+    - role: docker
+    - role: swarm

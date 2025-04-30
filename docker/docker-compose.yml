@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  web:
+    image: manjunathdc/yii2-app:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:80"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=yii2
+      - DB_USER=root
+      - DB_PASSWORD=secret
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: yii2
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+volumes:
+  db_data:

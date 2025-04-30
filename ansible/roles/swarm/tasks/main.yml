@@ -1,0 +1,21 @@
+---
+- name: Initialize Docker Swarm
+  command: docker swarm init --advertise-addr {{ ansible_default_ipv4.address }}:{{ swarm_port }}
+  register: swarm_result
+  changed_when: "'This node is already part of a swarm' not in swarm_result.stderr"
+
+- name: Create Docker overlay network for Yii2 app
+  command: docker network create --driver overlay --attachable yii2_network
+  register: create_network
+  failed_when: false  # Ignore error if it already exists
+  changed_when: "'already exists' not in create_network.stderr"
+
+- name: Deploy Yii2 application stack
+  command: >
+    docker service create
+    --name {{ app_name }}
+    --publish 8000:{{ app_port }}
+    --replicas 2
+    --network yii2_network
+    {{ app_image }}
+  when: swarm_result is changed

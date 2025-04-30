@@ -1,0 +1,106 @@
+- name: Install prerequisites
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+    - python3-pip
+    - python3-setuptools
+    - git
+    - nginx
+
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker repository
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+    state: present
+
+- name: Install Docker
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+
+- name: Install Docker Compose
+  pip:
+    name: docker-compose
+    state: present
+
+- name: Add ubuntu user to docker group
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
+
+- name: Ensure Docker is running and enabled
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Create directory for nginx configuration
+  file:
+    path: /etc/nginx/sites-available
+    state: directory
+
+- name: Create directory for enabled sites
+  file:
+    path: /etc/nginx/sites-enabled
+    state: directory
+
+- name: Configure NGINX
+  template:
+    src: nginx.conf.j2
+    dest: "{{ nginx_conf_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart nginx
+
+- name: Enable NGINX site
+  file:
+    src: "{{ nginx_conf_path }}"
+    dest: "{{ nginx_conf_link }}"
+    state: link
+  notify: restart nginx
+
+- name: Remove default NGINX site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: restart nginx
+
+- name: Ensure NGINX is running and enabled
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Allow HTTP through firewall
+  ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+
+- name: Allow HTTPS through firewall
+  ufw:
+    rule: allow
+    port: '443'
+    proto: tcp
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+    policy: deny
